@@ -17,15 +17,15 @@ quota = dict(grape=1, papaya=1, poplar=2, medicago=2, lyrata=1, peach=1)
 species = "lyrata papaya peach grape".split()
 
 
-def coge_url(accns, revs):
+def coge_url(accns, revs, drs):
     assert len(accns) == len(revs)
     g = ["accn%d=%s" % (i+1, g) for i, g in enumerate(accns)]
     noref_all = ["ref%d=0" % (i+1) for i in xrange(1, len(accns))]
     revs = ["rev%d=1" % (i+1) for i, r in enumerate(revs) if r=="-"]
-    lyrata_dsid = "&dsid%d=24" % (species.index("lyrata"))
-    grape_dsid = "&dsid%d=43318" % (species.index("grape"))
-    extra = "&".join(["&".join(noref_all), "&".join(revs), lyrata_dsid, grape_dsid])
-    gevo_url = "http://genomevolution.org/CoGe/GEvo.pl?%s&num_seqs=%d&autogo=1&ref1=1&apply_all=100000&%s" % \
+    drs = ["drup%d=%s&drdown%d=%s" % (i+1, r, i+1, r) for i, r in enumerate(drs)]
+    lyrata_dsid = "&dsid%d=39129" % (species.index("lyrata") + 1)
+    extra = "&".join(["&".join(noref_all), "&".join(revs), "&".join(drs), lyrata_dsid])
+    gevo_url = "http://genomevolution.org/CoGe/GEvo.pl?%s&num_seqs=%d&autogo=1&%s" % \
         ("&".join(g), len(accns), extra)
     return gevo_url
 
@@ -34,12 +34,11 @@ def attach_species(rec, s):
     q = quota[s] # get top n hits (ranked by synteny score)
     qrec = collections.defaultdict(list)
     for row in fp:
-        query, anchor, gray, score, orientation = row.split()
+        query, anchor, dr, gray, orientation, score = row.split()
         if not query.startswith("AT"): continue
-        if anchor=="na": anchor, score, gray, orientation = "", "", "", ""
-        if s=="grape": anchor = anchor.replace("GSVIVT", "GSVIV")
+        if anchor=="na": anchor, dr, gray, orientation, score = "", "", "", "", ""
         if len(qrec[query]) < q:
-            qrec[query].append((anchor, score, gray, orientation))
+            qrec[query].append((anchor, dr, gray, orientation, score))
 
     for q, v in qrec.iteritems():
         rec[q].append(sorted(v))
@@ -50,7 +49,6 @@ if __name__ == '__main__':
     # query=>anchors
     rec = collections.defaultdict(list)
     for i, s in enumerate(species):
-        q = quota[s]
         attach_species(rec, s)
 
     fw = file("master_list.csv", "w")
@@ -58,12 +56,18 @@ if __name__ == '__main__':
     print >>fw, "athaliana,%s,coge_link" % (",".join(species))
     for q, v in sorted(rec.items()):
         if not q.startswith("AT"): continue
+        
         all_genes = [[x[0] for x in cv] for cv in v]
-        revs = [[x[-1] for x in cv] for cv in v]
-        revs = ["+"] + list(itertools.chain(*revs))
         all_genes = [q] + list(itertools.chain(*all_genes))
-        v = ["|".join("%s(%s%s)" % (a, s, g) for (a, s, g, o) in cv) for cv in v]
+        
+        revs = [[x[3] for x in cv] for cv in v]
+        revs = ["+"] + list(itertools.chain(*revs))
+
+        drs =  [[x[1] for x in cv] for cv in v]
+        drs = ["75000"] + list(itertools.chain(*drs))
+
+        v = ["|".join("%s(%s%s)" % (a, s, g) for (a, d, g, o, s) in cv) for cv in v]
         #print all_genes
-        print >>fw, "%s,%s,%s" % (q, ",".join(v), coge_url(all_genes, revs)) 
+        print >>fw, "%s,%s,%s" % (q, ",".join(v), coge_url(all_genes, revs, drs)) 
 
     fw.close()
