@@ -12,6 +12,10 @@ def shorten(a, url):
     return a.shorten(url)
 """
 
+# TODO: athaliana region size 
+# TODO: proxy region, use genomic coordinate
+# TODO: make sure that RNA genes are all included
+
 quota = dict(grape=1, papaya=1, poplar=2, medicago=2, lyrata=1, peach=1)
 #species = "lyrata papaya poplar medicago grape".split()
 species = "lyrata papaya peach grape".split()
@@ -23,7 +27,7 @@ def coge_url(accns, revs, drs):
     noref_all = ["ref%d=0" % (i+1) for i in xrange(1, len(accns))]
     revs = ["rev%d=1" % (i+1) for i, r in enumerate(revs) if r=="-"]
     drs = ["drup%d=%s&drdown%d=%s" % (i+1, r, i+1, r) for i, r in enumerate(drs)]
-    lyrata_dsid = "&dsid%d=39129" % (species.index("lyrata") + 1)
+    lyrata_dsid = "&dsid%d=39129" % (species.index("lyrata") + 2)
     extra = "&".join(["&".join(noref_all), "&".join(revs), "&".join(drs), lyrata_dsid])
     gevo_url = "http://genomevolution.org/CoGe/GEvo.pl?%s&num_seqs=%d&autogo=1&%s" % \
         ("&".join(g), len(accns), extra)
@@ -34,7 +38,8 @@ def attach_species(rec, s):
     q = quota[s] # get top n hits (ranked by synteny score)
     qrec = collections.defaultdict(list)
     for row in fp:
-        query, anchor, dr, gray, orientation, score = row.split()
+        #query, anchor, dr, gray, orientation, score = row.split()
+        query, anchor, gray, score, dr, orientation = row.split()
         if not query.startswith("AT"): continue
         if anchor=="na": anchor, dr, gray, orientation, score = "", "", "", "", ""
         if len(qrec[query]) < q:
@@ -51,9 +56,9 @@ if __name__ == '__main__':
     for i, s in enumerate(species):
         attach_species(rec, s)
 
-    fw = file("master_list.csv", "w")
+    fw = file("master_list.tab", "w")
     # header
-    print >>fw, "athaliana,%s,coge_link" % (",".join(species))
+    print >>fw, "athaliana\t%s\tcoge_link" % ("\t".join(species))
     for q, v in sorted(rec.items()):
         if not q.startswith("AT"): continue
         
@@ -68,6 +73,6 @@ if __name__ == '__main__':
 
         v = ["|".join("%s(%s%s)" % (a, s, g) for (a, d, g, o, s) in cv) for cv in v]
         #print all_genes
-        print >>fw, "%s,%s,%s" % (q, ",".join(v), coge_url(all_genes, revs, drs)) 
+        print >>fw, "%s\t%s\t%s" % (q, "\t".join(v), coge_url(all_genes, revs, drs)) 
 
     fw.close()
