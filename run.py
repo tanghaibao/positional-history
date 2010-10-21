@@ -17,23 +17,38 @@ def sh(cmd, go=True):
         out, err = proc.communicate()
 
 # paths for data
-S="athaliana lyrata papaya peach grape".split()
-BDIR="/home/bao/blast/blastz"
+from orgs import species as S
+BDIR="blasts"
 DDIR="bed"
 QDIR="/home/bao/projects/quota-alignment"
 RDIR="results"
 
+BLAST_NB="/usr/local/src/bio-pipeline/blast_nearby/blast_nearby.py"
+BLAST_NB_CMD="bl2seq -i %(query_fasta)s -j %(subject_fasta)s -p blastn -e 0.05 -W 15 -D 1 "
+FDIR='fastas/'
+
+cmds = ["./blast_to_raw.py ${BDIR}/${a}_${b}.blastz --write-filtered-blast --tandem_Nmax 10 --qbed=${DDIR}/$a.bed --sbed=${DDIR}/$b.bed > ${BDIR}/${a}_${b}.blastz.filtered",
+        "./synteny_score.py ${BDIR}/${a}_${b}.blastz.filtered --qbed=${DDIR}/${a}.bed --sbed=${DDIR}/${b}.nolocaldups.bed >${RDIR}/${a}_${b}.synteny_score",
+        "./extract_gray_anchors.py --qbed=${DDIR}/${a}.bed --qfasta ${FDIR}/${a}.fa  --sbed=${DDIR}/${b}.nolocaldups.bed --sfasta ${FDIR}/${b}.fa --pad 15000 ${RDIR}/${a}_${b}.synteny_score --out-prefix ${RDIR}/${a}_${b}",
+        "${BLAST_NB} --anchors ${RDIR}/${a}_${b}.anchors --dist 0 ${FDIR}/${a}.fa ${FDIR}/${b}.fa --cmd '${BLAST_NB_CMD}'  > ${BDIR}/${a}_${b}.nearby.blast",
+        "./count_hits_near_flankers.py --missing ${RDIR}/${a}_${b}.missing --qbed bed/${a}.bed --sbed bed/${b}.nolocaldups.bed --dist 15000 --blast ${BDIR}/${a}_${b}.nearby.blast ${RDIR}/${a}_${b}.synteny_score > ${RDIR}/${a}_${b}.nearby.synteny_score"
+       ]
 
 # run the batch commands
 len_S = len(S)
-for species in S[1:]:
+for species in S[4:5]:
     a, b = "athaliana", species
     if a > b: a, b = b, a
-    cmd1 = "blast_to_raw.py ${BDIR}/${a}_${b}.blastz --write-filtered-blast --tandem_Nmax 10 --qbed=${DDIR}/$a.bed --sbed=${DDIR}/$b.bed >${a}_${b}.blastz.filtered"
-    cmd2 = "synteny_score.py ${a}_${b}.blastz.filtered --qbed=${DDIR}/${a}.bed --sbed=${DDIR}/$b.nolocaldups.bed >${RDIR}/${a}_${b}.synteny_score"
-    cmd1 = Template(cmd1).substitute(locals())
-    cmd2 = Template(cmd2).substitute(locals())
-    go = True 
-    #sh(cmd1, go=go)
-    sh(cmd2, go=go)
+    print "\n" + ("=" * len(b))
+    print b
+    print "=" * len(b)
+    go = True
+    for cmd in cmds[2:]:
+        cmd = Template(cmd).substitute(locals())
+        sh(cmd, go=go)
 
+cmd = "./create_master_bed.py"
+sh(cmd)
+
+cmd = "./assembly_synteny.py"
+sh(cmd)

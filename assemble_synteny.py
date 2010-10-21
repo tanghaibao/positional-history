@@ -1,20 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-import csv
+#import csv
 import itertools
 import collections
 from bed_utils import Bed
+import sys
 
-"""
-import bitly
-api = bitly.Api(login="tanghaibao", apikey="R_51b7c08fbb167cc934ca6ae7fd9e8b2d")
-def shorten(a, url):
-    return a.shorten(url)
-"""
-species = "athaliana lyrata grape papaya peach".split()
-DSIDS = [42029, 39219, 43318, 563, 42478]
-DSIDS = dict(zip(species, DSIDS))
+
+# get configuration of species list
+from orgs import species, DSIDS, quota
 
 
 class SyntenyLine(object):
@@ -31,11 +26,17 @@ class SyntenyLine(object):
         return "\t".join(str(x) for x in (self.query, self.anchor, self.gray, self.score, self.dr, self.rev))
     __repr__=__str__
 
-quota = dict(grape=1, papaya=1, poplar=2, medicago=2, lyrata=1, peach=1)
+
+def make_header(species):
+    mspecies = []
+    for s in species:
+        mspecies += ["%s-%d" % (s, i+1) for i in range(quota[s])]
+
+    return "%s\tcoge_link" % ("\t".join(mspecies))
 
 
 def attach_species(rec, s):
-    fp = file("results/athaliana_%s.synteny_score" % s)
+    fp = file("results/athaliana_%s.nearby.synteny_score" % s)
     q = quota[s] # get top n hits (ranked by synteny score)
     qrec = collections.defaultdict(list)
     for row in fp:
@@ -63,7 +64,6 @@ def build_gevo_link(query, group, i, bed, coge_pos):
     while bed[k].seqid==seqid and k-i <= 20:
         k += 1
     k -= 1
-    #print j, i, k
 
     left_dist = abs(bed[j].start - start)
     right_dist = abs(bed[k].start - start)
@@ -73,12 +73,18 @@ def build_gevo_link(query, group, i, bed, coge_pos):
     # build the csv
     group.insert(0, SyntenyLine("\t".join(str(x) for x in (query, query, "S", k-j, query_dr, "+"))))
     # pad the array to align the columns for each species
-    template = ["."] * len(species)
+    species_count = list(itertools.chain.from_iterable([[x] * quota[x] for x in species])) 
+    # species_count will look like ['athaliana', 'lyrata', 'poplar', 'poplar', ...],
+    # note how poplar gets two counts, according to quota
+    template = ["."] * len(species_count) 
 
     for g in group:
         prefix = coge_pos[g.anchor][0]
         newname = g.anchor if g.gray=="S" else "-"
-        template[species.index(prefix)] = "%s||%d%s" % (newname, g.score, g.gray) 
+        colpos = species_count.index(prefix)
+        species_count[colpos] = '.' # mark already used
+        template[colpos] = "%s|%d|%s" % (newname, g.score, g.gray) 
+        
 
     gene_names = "\t".join(template)
 
@@ -98,23 +104,25 @@ def build_gevo_link(query, group, i, bed, coge_pos):
     revs = ["rev%d=%d" % (i+1, 1) for i, s in enumerate(group) if s.rev=="-"]
     refs = ["ref%d=%d" % (i+1, 0) for i, s in enumerate(group) if s.anchor!=query]
     extras = ["num_seqs=%d" % len(group), "autogo=1"]
-    lyrata_dsid = ["&dsid%d=39219" % (i + 1) for i, s in enumerate(group) \
-            if coge_pos[s.anchor][0]=="lyrata" and s.gray=="G"]
+    lyrata_dsid = ["dsid%d=%d" % (i + 1, DSIDS["lyrata"]) for i, s in enumerate(group) \
+            if coge_pos[s.anchor][0]=="lyrata" and s.gray=="S"]
     params = "&".join(accns + drups + drdowns + revs + refs + extras + lyrata_dsid)
 
     return gene_names, url + "?" + params
 
 
 if __name__ == '__main__':
+    from datetime import date
 
     # query=>anchors
     rec = collections.defaultdict(list)
     for s in species[1:]:
         attach_species(rec, s)
 
-    fw = file("master_list.tab", "w")
+    fw = file("master_list-%s.tab" % date.today(),  "w")
+    print >>sys.stderr, "writing to", fw.name
     # header
-    print >>fw, "%s\tcoge_link" % ("\t".join(species))
+    print >>fw, make_header(species)
     bed = Bed("bed/all.bed")
     coge_pos = {}
     for x in bed:
