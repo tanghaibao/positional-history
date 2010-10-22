@@ -36,19 +36,22 @@ cmds = ["./blast_to_raw.py ${BDIR}/${a}_${b}.blastz --write-filtered-blast --tan
 
 # run the batch commands
 len_S = len(S)
-for species in S[4:5]:
+
+# modify range of species to run certain species
+for species in S[3:4]:
     a, b = "athaliana", species
     if a > b: a, b = b, a
     print "\n" + ("=" * len(b))
     print b
     print "=" * len(b)
     go = True
-    for cmd in cmds[2:]:
+    # modify range of cms to run part of pipeline
+    for cmd in cmds:
         cmd = Template(cmd).substitute(locals())
         sh(cmd, go=go)
 
-cmd = "./create_master_bed.py"
+cmd = "python create_master_bed.py"
 sh(cmd)
 
-cmd = "./assembly_synteny.py"
+cmd = "python assemble_synteny.py"
 sh(cmd)
