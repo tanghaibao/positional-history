@@ -19,3 +19,16 @@ running the pipeline, also make sure the following files are in place.
 * ``blasts/athaliana_species.blastz``, BLAST tabular format (either through
   BLAST -m8 or use LASTZ wrapper `here
   <http://github.com/tanghaibao/bio-pipeline/tree/master/lastz_wrapper/>`_)
+
+
+Notes
+------
+``blast_to_raw.py`` has ``strip_names`` in the BLAST parsing routine. Sometimes you
+want to strip names for the query but not subject, other times you want to strip
+names for both. Modify around Line 80. 
+
+Known issues
+-------------
++ RNA genes included in bed, but not blasted.
++ not always getting tightest flankers
++ not sure of gene-set for thaliana.

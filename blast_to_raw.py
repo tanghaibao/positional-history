@@ -80,8 +80,8 @@ def main(blast_file, options):
     for b in blasts:
         query, subject = b.query, b.subject
         if ostrip:
-            query, subject = gene_name(query), gene_name(subject)
-            #query, subject = gene_name(query), subject 
+            #query, subject = gene_name(query), gene_name(subject)
+            query, subject = gene_name(query), subject 
         if query not in qorder:
             print >>sys.stderr, "WARNING: %s not in %s" % (query, qbed.filename)
             continue

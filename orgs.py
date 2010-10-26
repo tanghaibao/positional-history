@@ -13,6 +13,7 @@ Species = namedtuple('Species', 'name dsid quota')
 orgs = [
         Species('athaliana', 42029, 1),
         Species('cacao', 45781, 1),
+        Species('castor', 42093, 1),
         Species('lyrata', 39129, 1),
         Species('papaya', 43486, 1),
         Species('peach', 42478, 1),
@@ -23,7 +24,7 @@ orgs = [
 orgs = dict((x.name, x) for x in orgs)
 
 # you'd only need to modify the species list to be included in the pipeline 
-species = "athaliana lyrata papaya cacao peach grape".split()
+species = "athaliana lyrata papaya castor peach grape".split()
 
 DSIDS = dict((x, orgs[x].dsid) for x in species)
 quota = dict((x, orgs[x].quota) for x in species)

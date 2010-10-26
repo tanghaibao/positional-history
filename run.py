@@ -38,7 +38,7 @@ cmds = ["./blast_to_raw.py ${BDIR}/${a}_${b}.blastz --write-filtered-blast --tan
 len_S = len(S)
 
 # modify range of species to run certain species
-for species in S[3:4]:
+for species in ["castor"]:
     a, b = "athaliana", species
     if a > b: a, b = b, a
     print "\n" + ("=" * len(b))
