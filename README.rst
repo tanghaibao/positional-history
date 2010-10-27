@@ -9,8 +9,11 @@ The scripts are mostly internal and we do not make attempts to support the
 usage for external research. The entire pipeline is run as command lines in the
 order specified in ``run.py``.
 
-Modify ``orgs.py`` to select only subset of species to be included in the final
-spreadsheet, which will be something like ``master_list-2010-10-21.tab``. Before
+Modify ``orgs.py`` to select only subset of species to be included, use CoGe's
+`OrganismView <http://genomevolution.org/CoGe/OrganismView.pl>`_ to get the dsid
+and the tag (which is the prefix like `scaffold`, or `supercontig` - as each
+species seqids are defined a bit differently in CoGe). The final
+spreadsheet will be something like ``master_list-2010-10-21.tab``. Before
 running the pipeline, also make sure the following files are in place. 
 
 * ``bed/species.bed``, BED-format (``chr``, ``start``, ``stop``, ``name``)
@@ -26,6 +29,7 @@ Notes
 ``blast_to_raw.py`` has ``strip_names`` in the BLAST parsing routine. Sometimes you
 want to strip names for the query but not subject, other times you want to strip
 names for both. Modify around Line 80. 
+
 
 Known issues
 -------------

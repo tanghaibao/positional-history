@@ -9,7 +9,7 @@ import sys
 
 
 # get configuration of species list
-from orgs import species, DSIDS, quota
+from orgs import species, DSIDS, quota, tags 
 
 
 class SyntenyLine(object):
@@ -129,9 +129,12 @@ if __name__ == '__main__':
         prefix = x.seqid.split(":")[0]
         dsid = DSIDS[prefix]
         seqid = x.seqid.replace(prefix+":", "")
-        if prefix in ("athaliana", "grape"): tag = ""
-        elif prefix in ("papaya", ): tag = "supercontig_"
-        else: tag = "scaffold_"
+        tag = tags[prefix] # one of "", "supercontig_", "scaffold_"
+
+        #if prefix in ("athaliana", "grape"): tag = ""
+        #elif prefix in ("papaya", ): tag = "supercontig_"
+        #else: tag = "scaffold_"
+
         coge_pos[x.accn] = (prefix, dsid, tag + seqid, x.start)
 
     for i, x in enumerate(bed):
