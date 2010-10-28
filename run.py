@@ -50,8 +50,6 @@ for species in ["castor"]:
         cmd = Template(cmd).substitute(locals())
         sh(cmd, go=go)
 
-cmd = "python create_master_bed.py"
-sh(cmd)
-
+# final command to execute (yay)
 cmd = "python assemble_synteny.py"
 sh(cmd)

@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-#import csv
+'''
+the last script to run to get the master spread sheet that contains the
+syntelog list, along with annotation info and gevo links
+'''
+
+import csv
 import itertools
 import collections
 from bed_utils import Bed
@@ -27,12 +32,52 @@ class SyntenyLine(object):
     __repr__=__str__
 
 
+def correct_lyrata(filename='At_genes_shouldbe_F_in_lyrata.txt'):
+    # read the genes from the file - these are the At genes that should be
+    # marked as F in the spreadsheet
+    assert species[1]=='lyrata', 'lyrata should be second species on the " +\
+                "list, you have %s' % species
+
+    print >>sys.stderr, "read F-gene list for lyrata correction"
+    fp = open(filename)
+    should_be_F = set(fp.read().split())
+    return should_be_F
+
+
+def create_master_bed(species):
+    print >>sys.stderr, "assemble master bed for %s" % species
+    fw = open("bed/all.bed", "w")
+    for s in species:
+        bed = Bed("bed/%s.bed" % s)
+        for b in bed:
+            seqid = b.seqid
+            if s=="athaliana": 
+                seqid = seqid.replace("Chr", "")
+            b.seqid = "%s:%s" % (s, seqid)
+            print >>fw, b
+
+
+def read_annotations(filename="TAIR9_functional_descriptions"):
+    # read in the a. thaliana annotations
+    print >>sys.stderr, "read annotation file", filename
+    reader = csv.DictReader(open(filename), delimiter="\t")
+    annotations = {}
+    for row in reader:
+        gene = row["Model_name"]
+        gene = gene.rsplit(".", 1)[0]
+        annotations[gene] = [row["Type"], row["Short_description"]]
+
+    return annotations
+
+
 def make_header(species):
     mspecies = []
     for s in species:
         mspecies += ["%s-%d" % (s, i+1) for i in range(quota[s])]
 
-    return "%s\tcoge_link" % ("\t".join(mspecies))
+    header = 'athaliana\ttype\tdescription\t%s\tcoge_link' % ('\t'.join(mspecies[1:]))
+
+    return header 
 
 
 def attach_species(rec, s):
@@ -71,7 +116,8 @@ def build_gevo_link(query, group, i, bed, coge_pos):
     query_dr = (max(left_dist, right_dist) / 10000 + 1) * 10000
 
     # build the csv
-    group.insert(0, SyntenyLine("\t".join(str(x) for x in (query, query, "S", k-j, query_dr, "+"))))
+    group.insert(0, SyntenyLine("\t".join(str(x) for x in \
+            (query, query, "S", k-j, query_dr, "+"))))
     # pad the array to align the columns for each species
     species_count = list(itertools.chain.from_iterable([[x] * quota[x] for x in species])) 
     # species_count will look like ['athaliana', 'lyrata', 'poplar', 'poplar', ...],
@@ -83,10 +129,10 @@ def build_gevo_link(query, group, i, bed, coge_pos):
         newname = g.anchor if g.gray=="S" else "-"
         colpos = species_count.index(prefix)
         species_count[colpos] = '.' # mark already used
-        template[colpos] = "%s|%d|%s" % (newname, g.score, g.gray) 
+        #template[colpos] = "%s|%d|%s" % (newname, g.score, g.gray) 
+        template[colpos] = newname if g.gray=='S' else g.gray
         
-
-    gene_names = "\t".join(template)
+    gene_names = template
 
     # build the link
     url = "http://genomevolution.org/CoGe/GEvo.pl"
@@ -114,16 +160,22 @@ def build_gevo_link(query, group, i, bed, coge_pos):
 if __name__ == '__main__':
     from datetime import date
 
+    # get all the species.bed into the same file for easy loading
+    #create_master_bed(species)
+    bed = Bed("bed/all.bed")
+
     # query=>anchors
     rec = collections.defaultdict(list)
     for s in species[1:]:
         attach_species(rec, s)
 
-    fw = file("master_list-%s.tab" % date.today(),  "w")
+    annotations = read_annotations()
+    should_be_F = correct_lyrata() 
+
+    fw = file("maggie_list-%s.tab" % date.today(),  "w")
     print >>sys.stderr, "writing to", fw.name
     # header
     print >>fw, make_header(species)
-    bed = Bed("bed/all.bed")
     coge_pos = {}
     for x in bed:
         prefix = x.seqid.split(":")[0]
@@ -131,16 +183,19 @@ if __name__ == '__main__':
         seqid = x.seqid.replace(prefix+":", "")
         tag = tags[prefix] # one of "", "supercontig_", "scaffold_"
 
-        #if prefix in ("athaliana", "grape"): tag = ""
-        #elif prefix in ("papaya", ): tag = "supercontig_"
-        #else: tag = "scaffold_"
-
         coge_pos[x.accn] = (prefix, dsid, tag + seqid, x.start)
 
     for i, x in enumerate(bed):
         if not x.seqid.startswith("at"): continue
         query = x.accn
         group = list(itertools.chain(*rec[query]))
-        csv, gevo_link = build_gevo_link(query, group, i, bed, coge_pos)
-        print >>fw, csv + "\t" + gevo_link
+        gene_names, gevo_link = build_gevo_link(query, group, i, bed, coge_pos)
+        query, rest = gene_names[0], gene_names[1:]
+        query = query.split('|')[0]
+        # apply the correction on lyrata columns so that it matches maggie's
+        # plos genetics findings
+        if query in should_be_F: 
+            rest[0] = 'F'
+        csv = [query] + annotations[query] + rest
+        print >>fw, "%s\t%s" % ('\t'.join(csv), gevo_link)
 

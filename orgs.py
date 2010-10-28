@@ -25,7 +25,7 @@ orgs = [
 orgs = dict((x.name, x) for x in orgs)
 
 # you'd only need to modify the species list to be included in the pipeline 
-species = "athaliana lyrata papaya cacao peach grape".split()
+species = "athaliana lyrata papaya poplar grape".split()
 
 DSIDS = dict((x, orgs[x].dsid) for x in species)
 quota = dict((x, orgs[x].quota) for x in species)
