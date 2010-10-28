@@ -135,7 +135,7 @@ def build_gevo_link(query, group, i, bed, coge_pos):
     gene_names = template
 
     # build the link
-    url = "http://genomevolution.org/CoGe/GEvo.pl"
+    url = "http://genomevolution.com/CoGe/GEvo.pl"
     accns = []
     for i, s in enumerate(group):
         j = i+1
